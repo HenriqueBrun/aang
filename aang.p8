@@ -62,13 +62,24 @@ local health={
 }
 
 local attack={
-    update=function()
+	can_attack = false,
+	attack_duration=0,
+    update=function(self)
         if (btnp(4) and not (aang.state == "still") and not (energy.val == 0)) then
             energy.val-=10
+         	self.attack_duration=0
+            self.can_attack=true
         end     
+
+        if self.attack_duration < 15 then
+        	self.attack_duration+=1
+        else
+        	self.can_attack=false
+         	self.attack_duration=0
+        end
     end,
-    draw=function()
-        if (btnp(4) and not (aang.state == "still") and not (energy.val == 0)) then
+    draw=function(self)
+        if (self.can_attack == true) then
             if (aang.state == "down") then
                 for i=0,128/8 do
                     spr(5,i*8,aang.y+28)
@@ -100,7 +111,7 @@ end
 
 function _update()
     aang:update()
-    attack.update()
+    attack:update()
 end
 
 function _draw()
@@ -108,7 +119,7 @@ function _draw()
     aang:draw()
     energy:draw()
     health:draw()
-        attack.draw()
+    attack:draw()
 end
 
 function draw_still_aang(aang)
@@ -169,4 +180,4 @@ ffffffffffffffffffffffff70007c07808898804994499900700707000000000000000000000000
 00500045005005000000000008000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0540000005400450000000000f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __sfx__
-010900000000000001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000000000000000000000000000000
+010900000000100001000010000100001000010000100001000010000100001000010000100001000010000100000000000000000000000000000000000000000000000000000000000000000000000000000000
