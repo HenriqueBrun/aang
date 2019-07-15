@@ -5,10 +5,12 @@ __lua__
 local global={
     can_spawn_enemy=false,
     frame_count=0,
-    speed=1
+    speed=1,
 }
 
 local enemies={}
+
+local directions={"up","right","down","left"}
 
 local aang={
       state="still",
@@ -69,41 +71,52 @@ local health={
     end
 }
 
-local attack={
-	can_attack = false,
-	attack_duration=0,
+local score={
+    x=84,
+    y=118,
+    val=0,
+    draw=function(self)
+        print("score: "..self.val,self.x,self.y,7)
+    end
+}
+
+local atack={
+	atacking=false,
+	atack_duration=0,
+    atack_type=aang.state,
     update=function(self)
+         self.atack_type=aang.state
         if (btnp(4) and not (aang.state == "still") and not (energy.val == 0)) then
             energy.val-=10
-         	self.attack_duration=0
-            self.can_attack=true
+         	self.atack_duration=0
+            self.atacking=true
         end     
 
-        if self.attack_duration < 15 then
-        	self.attack_duration+=1
+        if self.atack_duration < 7 then
+        	self.atack_duration+=1
         else
-        	self.can_attack=false
-         	self.attack_duration=0
+        	self.atacking=false
+         	self.atack_duration=0
         end
     end,
     draw=function(self)
-        if (self.can_attack == true) then
-            if (aang.state == "down") then
+        if (self.atacking == true) then
+            if (self.atack_type == "down") then
                 for i=0,128/8 do
                     spr(5,i*8,aang.y+28)
                 end
             end
-            if (aang.state == "up") then
+            if (self.atack_type == "up") then
                 for i=0,128/8 do
                     spr(4,i*8,aang.y-16)
                 end
             end
-            if (aang.state == "left") then
+            if (self.atack_type == "left") then
                 for i=0,128/8 do
                     spr(6,aang.x-24,i*8)
                 end
             end
-            if (aang.state == "right") then
+            if (self.atack_type == "right") then
                 for i=0,128/8 do
                     spr(3,aang.x+24,i*8)
                 end
@@ -113,40 +126,28 @@ local attack={
 }
 
 function generate_enemies(global)
-    printh("entered generate_enemies func", "debug.txt")
-    printh("frame count: "..global.frame_count, "debug.txt")
-    printh("actual frame count: "..(30/(global.speed/2)), "debug.txt")
     if (global.frame_count == (30/(global.speed/2))) then
-             printh( "can spawn enemy", "debug.txt")
              global.can_spawn_enemy=true
     end
 
     if global.can_spawn_enemy then
-        printh("spawned enemy", "debug.txt")
         add(enemies,make_enemy())
         global.can_spawn_enemy=false 
         global.frame_count=0 
     else
-        printh( "incresed frame count", "debug.txt")
         global.frame_count+=global.speed
     end
 end
 
--- function walk_enemies(enemies){
---     for enemy in all(enemies) do
-
---     end    
--- }
-
 function define_enemy_x_starting_position(direction)
     if direction == 0 then
-        return flr(rnd(121))
+        return flr(rnd(36)) + 42
     end
     if  direction == 1 then
         return 120
     end
     if  direction == 2 then
-        return flr(rnd(121))
+        return flr(rnd(36)) + 42
     end
     if  direction == 3 then
         return 0
@@ -158,20 +159,18 @@ function define_enemy_y_starting_position(direction)
         return 0
     end
     if  direction == 1 then
-        return flr(rnd(121))
+        return flr(rnd(36)) + 42
     end
     if  direction == 2 then
         return 120
     end
     if  direction == 3 then
-        return flr(rnd(121))
+        return flr(rnd(36)) + 42
     end
 end
 
 function make_enemy()
-    printh("entered make_enemy func", "debug.txt")
     local direct = flr(rnd(4))
-    printh("generated direction"..direct, "debug.txt")
     local enemy = {
         alive=true,
         direction=direct,
@@ -179,27 +178,113 @@ function make_enemy()
         y = define_enemy_y_starting_position(direct),
         speed = global.speed
     }
-    printh("enemy direction:"..enemy.direction, "debug.txt")
-    printh("enemy position x:"..enemy.x, "debug.txt")
-    printh("enemy position y:"..enemy.y, "debug.txt")
-    printh("enemy speed:"..enemy.speed, "debug.txt")
-
-    printh("printing enemy", "debug.txt")    
-    spr(7,enemy.x,enemy.y)
-    printh("printed enemy", "debug.txt")    
-
     return enemy
+end
+
+
+function walk_enemies(enemies)
+     for enemy in all(enemies) do
+        if enemy.alive then
+            spr(get_enemy_type(enemy),enemy.x,enemy.y)
+            enemy.x=increse_enemy_x(enemy)
+            enemy.y=increse_enemy_y(enemy)
+        end
+     end    
+end
+
+function get_enemy_type(enemy)
+    local direction=enemy.direction
+    if direction == 0 then
+        return 4
+    end
+    if  direction == 1 then
+        return 3
+    end
+    if  direction == 2 then
+        return 5
+    end
+    if  direction == 3 then
+        return 6
+    end
+end
+
+function increse_enemy_x(enemy)
+    local direction=enemy.direction
+    if direction == 0 then
+        return enemy.x
+    end
+    if  direction == 1 then
+        return enemy.x-1
+    end
+    if  direction == 2 then
+        return enemy.x
+    end
+    if  direction == 3 then
+        return enemy.x+1
+    end
+end
+
+function increse_enemy_y(enemy)
+    local direction=enemy.direction
+    if direction == 0 then
+        return enemy.y+1
+    end
+    if  direction == 1 then
+        return enemy.y
+    end
+    if  direction == 2 then
+        return enemy.y-1
+    end
+    if  direction == 3 then
+        return enemy.y
+    end
+end
+
+function verify_hit()
+    for enemy in all(enemies) do
+        if atack.atack_type == directions[enemy.direction+1] and enemy.alive and atack.atacking then
+            if atack.atack_type == "down" then
+                if box_hit(enemy.x,enemy.y,0,aang.y+28,enemy.x+8,enemy.y+8,128,aang.y+28+8) then
+                    enemy.alive=false
+                    energy.val+=10
+                    score.val+=1
+                end
+            end
+            if atack.atack_type == "right" then
+                if box_hit(enemy.x,enemy.y,aang.x+24,0,enemy.x+8,enemy.y+8,aang.x+24+8,128) then
+                    enemy.alive=false
+                    energy.val+=10
+                    score.val+=1
+                end
+            end
+            if atack.atack_type == "left" then
+                if box_hit(enemy.x,enemy.y,aang.x-24,0,enemy.x+8,enemy.y+8,aang.x-16,128) then
+                    enemy.alive=false
+                    energy.val+=10
+                    score.val+=1
+                end
+            end
+            if atack.atack_type == "up" then
+                if box_hit(enemy.x,enemy.y,0,aang.y-16,enemy.x+8,enemy.y+8,128,aang.y-8) then
+                    enemy.alive=false
+                    energy.val+=10
+                    score.val+=1
+                end
+            end
+        end
+    end
 end
 
 function _init()
  cls(0) 
- sfx(1)
+ -- sfx(1)
 end
 
 function _update()
     aang:update()
     generate_enemies(global)
-    attack:update()
+    atack:update()
+    verify_hit()
 end
 
 function _draw()
@@ -207,7 +292,9 @@ function _draw()
     aang:draw()
     energy:draw()
     health:draw()
-    attack:draw()
+    score:draw()
+    atack:draw()
+    walk_enemies(enemies) 
 end
 
 function draw_still_aang(aang)
@@ -242,6 +329,20 @@ function draw_looking_up_aang(aang)
     spr(16,aang.x,aang.y+7) 
     spr(35,aang.x-8,aang.y+2,1,1,true,true)
     spr(33,aang.x,aang.y+14)
+end
+
+function lines_overlapping(min1,max1,min2,max2)
+    return max1>min2 and max2>min1
+end
+
+function box_hit(left1,top1,left2,top2,right1,bottom1,right2,bottom2)
+
+    -- rectfill(left1,top1,right1,bottom1,14)
+    -- rectfill(left2,top2,right2,bottom2,14)
+    -- printh("test 1:"..(lines_overlapping(left1,right1,left2,right2) and 'true' or 'false'),"debug.txt")
+    -- printh("test 2:"..(lines_overlapping(top1,bottom1,top2,bottom2) and 'true' or 'false'),"debug.txt")
+    -- printh("test final:"..(lines_overlapping(left1,right1,left2,right2) and lines_overlapping(top1,bottom1,top2,bottom2) and 'true' or 'false'),"debug.txt")
+    return lines_overlapping(left1,right1,left2,right2) and lines_overlapping(top1,bottom1,top2,bottom2)
 end
 
 __gfx__
